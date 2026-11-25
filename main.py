@@ -54,24 +54,71 @@ Pass 2 (two genuine revisions of the winner):
   repetition IS the joke, and "the date" lands as the final word instead
   of "which day" (tighter, one syllable less, no filler).
 
-Final line (120 characters, hand-counted: 36 + 44 + 40):
+Final line (120 characters):
   "Technically I submitted at 11:59 PM. Technically the deadline was
   also 11:59 PM. Technically we disagree about the date."
+
+Pass 3 (structural revision — the words above are final; this pass is
+about the program itself, after re-reading Passes 1–2 with fresh eyes):
+
+  1. The joke is three beats of anaphora, but the code stored it as one
+     opaque string. The line is now assembled from three named beat
+     constants joined by single spaces, so the code mirrors the comic
+     structure the decision record describes — and a future edit can
+     retune one beat without retyping (and risking) the others.
+
+  2. The 200-character gate was enforced only by hand-counting in this
+     docstring. The program now checks len(LINE) against MAX_CHARS
+     itself and refuses to write an over-gate line.
+
+  3. Recount while restructuring: the original hand-count above
+     (36 + 44 + 40) was wrong in its parts even though the total was
+     right. The beats are actually 36, 43, and 39 characters, plus the
+     two joining spaces: 36 + 43 + 39 + 2 = 120. Corrected here so the
+     record matches the code that now measures it.
+
+  4. Output-path resolution (env override, "/output" fallback) moved
+     into its own small function so main() reads as: check the gate,
+     make the directory, write the line. Behaviour is unchanged.
 """
 
 import os
 
-LINE = (
-    "Technically I submitted at 11:59 PM. "
-    "Technically the deadline was also 11:59 PM. "
-    "Technically we disagree about the date."
-)
+# The line is three beats of "Technically ..." anaphora (see Pass 1/2 in
+# the module docstring). Keeping the beats as separate constants makes
+# that structure explicit: beat 1 concedes the submission time, beat 2
+# concedes the deadline, beat 3 reframes the whole failure as a dispute
+# about "the date" — the punch word, kept last.
+BEAT_SUBMITTED = "Technically I submitted at 11:59 PM."
+BEAT_DEADLINE = "Technically the deadline was also 11:59 PM."
+BEAT_PUNCH = "Technically we disagree about the date."
+
+LINE = " ".join((BEAT_SUBMITTED, BEAT_DEADLINE, BEAT_PUNCH))
+
+# The bounty's hard gate: one line, at most 200 characters.
+MAX_CHARS = 200
+
+
+def check_gate() -> None:
+    """Refuse to emit a line that would fail the character gate."""
+    if len(LINE) > MAX_CHARS:
+        raise SystemExit(
+            f"entry line is {len(LINE)} characters; gate is {MAX_CHARS}"
+        )
+
+
+def entry_path() -> str:
+    """Where the grader reads the entry: $MAKEFUN_OUTPUT_DIR/entry.txt,
+    falling back to /output/entry.txt when the variable is unset."""
+    out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
+    return os.path.join(out_dir, "entry.txt")
 
 
 def main() -> None:
-    out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
-    os.makedirs(out_dir, exist_ok=True)
-    with open(os.path.join(out_dir, "entry.txt"), "w", encoding="utf-8") as f:
+    check_gate()
+    path = entry_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
         f.write(LINE)
 
 
